@@ -17,5 +17,5 @@ jobs:
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BOOKELLO }}
-          projectId: bookello
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BOOKELLO_CHECKIN }}
+          projectId: bookello-checkin

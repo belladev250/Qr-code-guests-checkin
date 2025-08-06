@@ -1,5 +1,5 @@
 {
   "projects": {
-    "default": "checkin"
+    "default": "bookello-checkin"
   }
 }
