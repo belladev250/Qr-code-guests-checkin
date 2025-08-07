@@ -119,7 +119,7 @@ const handleLogin = async () => {
     }
 
     // 4. Redirect based on role
-    await redirectUser(staffData.role, staffData.hotelId);
+await redirectUser(staffData.role, staffData.hotelIds || staffData.hotelId);
     
   } catch (err) {
     console.error('Login error:', err);
@@ -139,19 +139,25 @@ const handleLogin = async () => {
   }
 };
 
-const redirectUser = async (role, hotelId) => {
+const redirectUser = async (role, hotelIds) => {
+  let validHotelIds = [];
+  
   switch (role) {
     case 'super_admin':
       await router.push('/super-admin-dashboard');
       break;
       
- 
-      
     case 'reception':
-      if (!hotelId) {
+      // Handle both array and single hotel ID
+      validHotelIds = Array.isArray(hotelIds) 
+        ? hotelIds 
+        : hotelIds ? [hotelIds] : [];
+      
+      if (validHotelIds.length === 0) {
         throw new Error('No hotel assigned to your reception account');
       }
-      await router.push(`/reception-dashboard?hotelId=${hotelId}`);
+      
+      await router.push(`/reception-dashboard?hotelId=${validHotelIds[0]}`);
       break;
       
     default:

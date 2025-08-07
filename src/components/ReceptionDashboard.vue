@@ -17,21 +17,14 @@
     >
       <div class="p-4 border-b border-blue-700">
         <h1 class="text-xl font-bold">Reception Panel</h1>
+        <div class="text-sm mt-1">{{ currentUser?.email }}</div>
       </div>
       <nav class="p-4 space-y-2">
-        <a 
-          href="#dashboard" 
-          class="block px-4 py-2 rounded bg-blue-700"
-          @click="mobileSidebarOpen = false"
+        <div class="px-4 py-2 rounded bg-blue-700">Dashboard</div>
+        <button 
+          @click="logout" 
+          class="px-4 py-2 rounded hover:bg-blue-700 transition flex items-center w-full"
         >
-          Dashboard
-        </a>
-
-        
-       <button 
-  @click="logout" 
-  class="px-4 py-2 rounded hover:bg-blue-700 transition flex items-center w-full"
->
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
           </svg>
@@ -40,20 +33,44 @@
       </nav>
     </div>
 
-    <!-- Overlay for mobile sidebar -->
+    <!-- Overlay -->
     <div 
       v-if="mobileSidebarOpen"
       @click="mobileSidebarOpen = false"
       class="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
     ></div>
 
+    <!-- Main Content -->
     <div class="lg:ml-64 p-4 md:p-8">
       <!-- Header -->
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
-        <h2 class="text-2xl font-bold">Guest Check-Ins, {{ hotelName }}</h2>
+        <div class="flex items-center gap-4">
+          <h2 class="text-2xl font-bold">Guest Check-Ins</h2>
+          <div v-if="assignedHotels.length > 1" class="relative">
+            <select 
+              v-model="currentHotelId" 
+              @change="fetchCheckins"
+              class="border rounded px-3 py-1 text-sm"
+            >
+              <option 
+                v-for="hotel in assignedHotels" 
+                :value="hotel.id" 
+                :key="hotel.id"
+              >
+                {{ hotel.name }}
+              </option>
+            </select>
+          </div>
+          <span v-else-if="assignedHotels.length === 1" class="text-lg font-medium text-gray-700">
+            {{ assignedHotels[0].name }}
+          </span>
+          <span v-else class="text-red-500 text-sm">No hotel assigned</span>
+        </div>
+        
         <button 
           @click="downloadReport" 
           class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded flex items-center justify-center w-full md:w-auto"
+          :disabled="filteredGuests.length === 0"
         >
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -76,21 +93,29 @@
         </div>
       </div>
 
+      <!-- Loading State -->
+      <div v-if="loading" class="flex justify-center p-8">
+        <svg class="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+      </div>
+
       <!-- Guest Table -->
-      <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div v-else class="bg-white rounded-lg shadow overflow-hidden">
         <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check-In</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check-out</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check-In Date</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check-out Date</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Passport/ID</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reservation</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">check in Time</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check-in Time</th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -107,21 +132,17 @@
                 <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                   {{ guest.source }}
                 </td>
-                   <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                <span> </span>  <span>USD</span>
+                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {{ guest.amount }} USD
                 </td>
                 <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                   <button 
                     @click="viewDocument(guest.passportURL, 'passport')" 
-                    class="text-blue-600 hover:text-blue-900 mr-2"
+                    class="text-blue-600 hover:text-blue-900"
                     :disabled="!guest.passportURL"
                     :class="{'opacity-50 cursor-not-allowed': !guest.passportURL}"
                   >
-                    <span class="hidden sm:inline">View</span>
-                    <svg class="w-5 h-5 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                    </svg>
+                    View
                   </button>
                 </td>
                 <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -131,10 +152,7 @@
                     :disabled="!guest.reservationURL"
                     :class="{'opacity-50 cursor-not-allowed': !guest.reservationURL}"
                   >
-                    <span class="hidden sm:inline">View</span>
-                    <svg class="w-5 h-5 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                    </svg>
+                    View
                   </button>
                 </td>
                 <td class="px-4 py-4 whitespace-nowrap">
@@ -146,12 +164,12 @@
                 <td class="px-4 py-4 whitespace-nowrap text-sm font-medium">
                   <button 
                     @click="markAsCheckedIn(guest.id)"
-                    class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded whitespace-nowrap"
+                    class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
                     v-if="guest.status === 'pending'"
                   >
                     Check In
                   </button>
-                  <span v-else class="text-gray-500 whitespace-nowrap">
+                  <span v-else class="text-gray-500">
                     {{ formatTime(guest.checkedInAt) }}
                   </span>
                 </td>
@@ -162,366 +180,247 @@
       </div>
 
       <!-- Empty State -->
-      <div v-if="filteredGuests.length === 0" class="bg-white shadow rounded-lg p-8 text-center mt-6">
-        <p class="text-gray-500">No guests found matching your filters</p>
+      <div v-if="!loading && filteredGuests.length === 0" class="bg-white shadow rounded-lg p-8 text-center mt-6">
+        <p class="text-gray-500">
+          {{ assignedHotels.length === 0 ? 'No hotel assigned to your account' : 'No guests found matching your filters' }}
+        </p>
       </div>
 
       <!-- Document Viewer Modal -->
-    <!-- Replace your existing Document Viewer Modal with this improved version -->
-<div v-if="activeDocument.url" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-  <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full h-[90vh] flex flex-col">
-    <div class="p-4 border-b flex justify-between items-center">
-      <h3 class="text-lg font-medium">{{ activeDocument.title }}</h3>
-      <button 
-        @click="activeDocument.url = null" 
-        class="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"
-      >
-        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-        </svg>
-      </button>
-    </div>
-    
-    <div class="flex-1 overflow-hidden">
-      <!-- Image Viewer -->
-      <div v-if="activeDocument.fileType === 'image'" class="w-full h-full flex items-center justify-center bg-gray-100">
-        <div class="max-w-full max-h-full overflow-auto p-4">
-          <img 
-            :src="activeDocument.url" 
-            :alt="activeDocument.title"
-            class="max-w-full max-h-full object-contain shadow-lg rounded"
-            style="min-height: 200px;"
-            @error="$event.target.src = activeDocument.originalUrl"
-          />
+      <div v-if="activeDocument.url" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+          <div class="p-4 border-b flex justify-between items-center">
+            <h3 class="text-lg font-medium">{{ activeDocument.title }}</h3>
+            <button 
+              @click="activeDocument.url = null" 
+              class="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"
+            >
+              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+          
+          <div class="flex-1 overflow-auto p-4">
+            <img 
+              v-if="activeDocument.fileType === 'image'" 
+              :src="activeDocument.url" 
+              :alt="activeDocument.title"
+              class="max-w-full max-h-full object-contain mx-auto"
+            />
+            <iframe 
+              v-else-if="activeDocument.fileType === 'pdf'"
+              :src="`https://docs.google.com/gview?url=${encodeURIComponent(activeDocument.url)}&embedded=true`" 
+              class="w-full h-full min-h-[70vh] border-0"
+              frameborder="0"
+            ></iframe>
+            <div v-else class="flex items-center justify-center h-full">
+              <div class="text-center">
+                <svg class="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <p class="text-gray-500 mb-4">Cannot preview this file type in browser</p>
+                <button 
+                  @click="downloadDocument"
+                  class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded inline-flex items-center"
+                >
+                  Download Document
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="p-4 border-t flex justify-between items-center">
+            <div class="text-sm text-gray-500">
+              Document Type: {{ activeDocument.type === 'passport' ? 'Passport/ID' : 'Reservation' }}
+            </div>
+            <div class="flex space-x-3">
+              <button 
+                @click="openInNewTab"
+                class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded"
+              >
+                Open in New Tab
+              </button>
+              <button 
+                @click="downloadDocument"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+              >
+                Download
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-      
-      <!-- PDF Viewer -->
-      <div v-else-if="activeDocument.fileType === 'pdf'" class="w-full h-full">
-        <iframe 
-          :src="activeDocument.url" 
-          class="w-full h-full border-0"
-          frameborder="0"
-        ></iframe>
-      </div>
-      
-      <!-- Fallback for unknown file types -->
-      <div v-else class="w-full h-full flex items-center justify-center bg-gray-100">
-        <div class="text-center p-8">
-          <svg class="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-          </svg>
-          <h3 class="text-lg font-medium text-gray-900 mb-2">Document Preview</h3>
-          <p class="text-gray-500 mb-4">Cannot preview this file type in browser</p>
-          <button 
-            @click="downloadDocument"
-            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded inline-flex items-center"
-          >
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-            </svg>
-            Download to View
-          </button>
-        </div>
-      </div>
-    </div>
-    
-    <div class="p-4 border-t flex justify-between items-center">
-      <div class="text-sm text-gray-500">
-        Document Type: {{ activeDocument.type === 'passport' ? 'Passport/ID' : 'Reservation Confirmation' }}
-        <span class="ml-2 px-2 py-1 bg-gray-100 rounded text-xs">
-          {{ activeDocument.fileType?.toUpperCase() }}
-        </span>
-      </div>
-      <div class="flex space-x-3">
-        <button 
-          @click="window.open(activeDocument.originalUrl || activeDocument.url, '_blank')"
-          class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded inline-flex items-center"
-        >
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-          </svg>
-          Open in New Tab
-        </button>
-        <button 
-          @click="downloadDocument"
-          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded inline-flex items-center"
-        >
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-          </svg>
-          Download
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { collection, getDocs, getDoc, doc, updateDoc, query, where } from 'firebase/firestore'
+import { 
+  collection, getDocs, getDoc, doc, updateDoc, 
+  query, where, Timestamp
+} from 'firebase/firestore'
 import { getAuth, signOut } from 'firebase/auth'
 import { db, auth } from '@/firebase'
 import { useRouter } from 'vue-router'
 
-// Data
+// State
+const mobileSidebarOpen = ref(false)
+const loading = ref(true)
 const guests = ref([])
-const hotels = ref([])
-const loading = ref(false)
-const assignedHotel = ref('')
-const router = useRouter()
-const hotelName = ref('');
-
-
-// Filters
+const assignedHotels = ref([])
+const currentHotelId = ref('')
 const statusFilter = ref('all')
+const activeDocument = ref({
+  type: null,
+  url: null,
+  title: '',
+  fileType: null
+})
+const currentUser = ref(null)
 
-// Document viewing
-// const activeDocument = ref({
-//   type: null,
-//   url: null,
-//   title: ''
-// })
+const router = useRouter()
 
+// Computed
+const filteredGuests = computed(() => {
+  return guests.value.filter(guest => 
+    statusFilter.value === 'all' || guest.status === statusFilter.value
+  )
+})
 
-onMounted(async () => {
-  try {
-    const user = getAuth().currentUser;
-    if (!user) return;
-    
-    // Get staff document
-    const staffDoc = await getDoc(doc(db, 'staff', user.uid));
-    if (staffDoc.exists()) {
-      const hotelId = staffDoc.data().hotelId;
-      
-      // Get hotel document
-      const hotelDoc = await getDoc(doc(db, 'hotels', hotelId));
-      if (hotelDoc.exists()) {
-        hotelName.value = hotelDoc.data().name;
-      }
-    }
-  } catch (error) {
-    console.error("Error fetching hotel name:", error);
-  }
-});
-
-// Fetch data on mount
-onMounted(async () => {
-  loading.value = true
+// Methods
+const fetchUserData = async () => {
   try {
     const auth = getAuth()
-    const user = auth.currentUser
-    if (!user) {
+    currentUser.value = auth.currentUser
+    
+    if (!currentUser.value) {
       router.push('/login')
       return
     }
 
-    // Get receptionist's assigned hotel
-    const userDoc = await getDoc(doc(db, 'staff', user.uid))
-    if (userDoc.exists()) {
-      assignedHotel.value = userDoc.data().hotelId
-    }
+    const userDoc = await getDoc(doc(db, 'staff', currentUser.value.uid))
+    if (!userDoc.exists()) return
 
-    // Fetch hotel name
-    const hotelsSnapshot = await getDocs(collection(db, 'hotels'))
-    hotels.value = hotelsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    const userData = userDoc.data()
+    const hotelIds = Array.isArray(userData.hotelIds) 
+      ? userData.hotelIds 
+      : userData.hotelId ? [userData.hotelId] : []
 
-    // Fetch check-ins for assigned hotel
-    if (assignedHotel.value) {
-      const checkinsQuery = query(
-        collection(db, 'checkins'),
-        where('hotel', '==', getHotelName(assignedHotel.value))
-      )
-      const checkinsSnapshot = await getDocs(checkinsQuery)
-      
-      guests.value = checkinsSnapshot.docs.map(doc => {
-        const data = doc.data()
-        return { 
-          id: doc.id, 
-          ...data,
-          // Ensure status is either 'pending' or 'checked-in'
-          status: data.status === 'checked-in' ? 'checked-in' : 'pending',
-          checkInDate: data.checkInDate?.toDate?.() || data.checkInDate,
-          checkOutDate: data.checkOutDate?.toDate?.() || data.checkOutDate
-        }
-      })
-    }
+    // Fetch hotel details
+    const hotelPromises = hotelIds.map(id => getDoc(doc(db, 'hotels', id)))
+    const hotelSnapshots = await Promise.all(hotelPromises)
+    
+    assignedHotels.value = hotelSnapshots
+      .filter(snap => snap.exists())
+      .map(snap => ({ id: snap.id, ...snap.data() }))
+    
+    currentHotelId.value = assignedHotels.value[0]?.id || ''
   } catch (error) {
-    console.error("Error loading data:", error)
+    console.error("Error fetching user data:", error)
+  }
+}
+
+const fetchCheckins = async () => {
+  if (!currentHotelId.value) {
+    guests.value = []
+    loading.value = false
+    return
+  }
+
+  loading.value = true
+  try {
+    const currentHotel = assignedHotels.value.find(h => h.id === currentHotelId.value)
+    if (!currentHotel) return
+
+    const checkinsQuery = query(
+      collection(db, 'checkins'),
+      where('hotel', '==', currentHotel.name)
+    )
+    
+    const checkinsSnapshot = await getDocs(checkinsQuery)
+    guests.value = checkinsSnapshot.docs.map(doc => {
+      const data = doc.data()
+      return { 
+        id: doc.id, 
+        ...data,
+        status: data.status === 'checked-in' ? 'checked-in' : 'pending',
+        checkInDate: data.checkInDate?.toDate?.() || data.checkInDate,
+        checkOutDate: data.checkOutDate?.toDate?.() || data.checkOutDate
+      }
+    })
+  } catch (error) {
+    console.error("Error fetching check-ins:", error)
   } finally {
     loading.value = false
   }
-})
-
-// Computed properties
-const filteredGuests = computed(() => {
-  return guests.value.filter(guest => {
-    return statusFilter.value === 'all' || guest.status === statusFilter.value
-  })
-})
-
-// Helper functions
-const formatDate = (dateString) => {
-  if (!dateString) return 'N/A'
-  const options = { year: 'numeric', month: 'short', day: 'numeric' }
-  return new Date(dateString).toLocaleDateString(undefined, options)
 }
 
-const formatTime = (dateString) => {
-  if (!dateString) return 'Checked in'
-  return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-}
-
-const statusClass = (status) => {
-  const classes = {
-    'pending': 'bg-yellow-100 text-yellow-800',
-    'checked-in': 'bg-green-100 text-green-800'
-  }
-  return classes[status] || 'bg-gray-100 text-gray-800'
-}
-
-const getHotelName = (hotelId) => {
-  const hotel = hotels.value.find(h => h.id === hotelId)
-  return hotel ? hotel.name : ''
-}
-
-  
-
-// Replace the existing document viewing functions in your Vue component
-
-// Document viewing
-const activeDocument = ref({
-  type: null, // 'passport' or 'reservation'
-  url: null,
-  title: '',
-  fileType: null // 'image' or 'pdf'
-});
-
-const viewDocument = (url, type) => {
-  if (!url) {
-    alert('Document not available');
-    return;
-  }
-  
-  const fileType = getFileType(url);
-  
-  activeDocument.value = {
-    type,
-    url: formatDocumentUrl(url, fileType),
-    originalUrl: url, // Keep original for download
-    title: type === 'passport' ? 'Passport/ID Document' : 'Reservation Confirmation',
-    fileType
-  };
-};
-
-const getFileType = (url) => {
-  // Check file extension
-  const lowercaseUrl = url.toLowerCase();
-  if (lowercaseUrl.includes('.pdf') || lowercaseUrl.includes('pdf')) {
-    return 'pdf';
-  }
-  if (lowercaseUrl.includes('.jpg') || lowercaseUrl.includes('.jpeg') || 
-      lowercaseUrl.includes('.png') || lowercaseUrl.includes('.gif') || 
-      lowercaseUrl.includes('.webp') || lowercaseUrl.includes('image')) {
-    return 'image';
-  }
-  
-  // If from Cloudinary, check the resource type in URL
-  if (url.includes('cloudinary.com')) {
-    if (url.includes('/image/') || url.includes('f_auto') || url.includes('q_auto')) {
-      return 'image';
-    }
-    if (url.includes('/raw/') || url.includes('.pdf')) {
-      return 'pdf';
-    }
-  }
-  
-  // Default to image for most uploads
-  return 'image';
-};
-
-const formatDocumentUrl = (url, fileType) => {
-  if (fileType === 'image') {
-    // For images, return the direct URL
-    if (url.includes('cloudinary.com')) {
-      // Optimize Cloudinary images for viewing
-      return url.replace('/upload/', '/upload/f_auto,q_auto,w_1200/');
-    }
-    return url;
-  } else {
-    // For PDFs, use Google Docs viewer as fallback
-    if (url.includes('cloudinary.com')) {
-      return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
-    }
-    return url;
-  }
-};
-
-// Add this method to handle download with proper URL
-const downloadDocument = () => {
-  const downloadUrl = activeDocument.value.originalUrl || activeDocument.value.url;
-  const link = document.createElement('a');
-  link.href = downloadUrl;
-  link.download = `${activeDocument.value.type}_document`;
-  link.target = '_blank';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
-
-// Template for the improved document viewer modal
-// Replace your existing document viewer modal with this:
-
-
-// Mark guest as checked-in
 const markAsCheckedIn = async (guestId) => {
+  if (!confirm('Mark this guest as checked-in?')) return
+  
   try {
-    if (!confirm('Mark this guest as checked-in?')) return
-    
-    const now = new Date().toISOString()
-    const userId = auth.currentUser?.uid
-    
+    const now = Timestamp.now()
     await updateDoc(doc(db, 'checkins', guestId), {
       status: 'checked-in',
       checkedInAt: now,
-      checkedInBy: userId
+      checkedInBy: currentUser.value.uid
     })
-    
+
     // Update local state
-    guests.value = guests.value.map(guest => {
-      if (guest.id === guestId) {
-        return {
-          ...guest,
-          status: 'checked-in',
-          checkedInAt: now,
-          checkedInBy: userId
-        }
-      }
-      return guest
-    })
-    
-    alert('Guest successfully checked in')
+    guests.value = guests.value.map(guest => 
+      guest.id === guestId 
+        ? { ...guest, status: 'checked-in', checkedInAt: now.toDate() }
+        : guest
+    )
   } catch (error) {
     console.error('Error checking in guest:', error)
     alert('Failed to check in guest: ' + error.message)
   }
 }
 
-// Report generation
+const viewDocument = (url, type) => {
+  if (!url) {
+    alert('Document not available')
+    return
+  }
+  
+  const fileType = url.toLowerCase().includes('.pdf') ? 'pdf' : 'image'
+  
+  activeDocument.value = {
+    type,
+    url,
+    title: type === 'passport' ? 'Passport/ID Document' : 'Reservation Confirmation',
+    fileType
+  }
+}
+
+const openInNewTab = () => {
+  window.open(activeDocument.value.url, '_blank')
+}
+
+const downloadDocument = () => {
+  const link = document.createElement('a')
+  link.href = activeDocument.value.url
+  link.download = activeDocument.value.title.replace(/\s+/g, '_').toLowerCase()
+  link.target = '_blank'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+
 const downloadReport = () => {
   const csvContent = "data:text/csv;charset=utf-8," +
     "Guest Name,Check-In Date,Check-Out Date,Status,Checked-In At\n" +
     filteredGuests.value.map(guest => 
-      `"${guest.guestName}","${formatDate(guest.checkInDate)}","${formatDate(guest.checkOutDate)}","${guest.status}","${guest.checkedInAt ? formatTime(guest.checkedInAt) : 'Not checked in'}"`
+      `"${guest.guestName}","${formatDate(guest.checkInDate)}","${formatDate(guest.checkOutDate)}","${guest.status}","${guest.checkedInAt ? formatTime(guest.checkedInAt) : 'N/A'}"`
     ).join("\n")
   
   const encodedUri = encodeURI(csvContent)
   const link = document.createElement("a")
   link.setAttribute("href", encodedUri)
-  link.setAttribute("download", "guest_checkins_report.csv")
+  link.setAttribute("download", `guest_checkins_${currentHotelId.value}.csv`)
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
@@ -530,13 +429,42 @@ const downloadReport = () => {
 const logout = async () => {
   try {
     await signOut(auth)
-    this.mobileSidebarOpen = false;
-
     router.push('/login')
   } catch (error) {
     console.error('Logout error:', error)
   }
 }
+
+// Helpers
+const formatDate = (date) => {
+  if (!date) return 'N/A'
+  return new Date(date).toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'short', 
+    day: 'numeric' 
+  })
+}
+
+const formatTime = (date) => {
+  if (!date) return 'N/A'
+  return new Date(date).toLocaleTimeString('en-US', { 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  })
+}
+
+const statusClass = (status) => {
+  return {
+    'pending': 'bg-yellow-100 text-yellow-800',
+    'checked-in': 'bg-green-100 text-green-800'
+  }[status] || 'bg-gray-100 text-gray-800'
+}
+
+// Lifecycle
+onMounted(async () => {
+  await fetchUserData()
+  await fetchCheckins()
+})
 </script>
 
 <style scoped>

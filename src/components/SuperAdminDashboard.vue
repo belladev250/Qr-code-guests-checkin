@@ -229,14 +229,20 @@
                 <option value="reception">Receptionist</option>
               </select>
             </div>
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">Assign Hotel</label>
-              <select v-model="staffForm.hotelId" class="border rounded w-full px-3 py-2" required>
-                <option v-for="hotel in hotels" :value="hotel.id" :key="hotel.id">
-                  {{ hotel.name }}
-                </option>
-              </select>
-            </div>
+
+           <div class="mb-4">
+           <label class="block text-sm font-medium text-gray-700 mb-1">Assign Hotels</label>
+              <select 
+                  v-model="staffForm.hotelIds" 
+                 multiple
+                 class="border rounded px-3 py-2 w-full h-auto min-h-[42px]" >
+
+                   <option v-for="hotel in hotels" :value="hotel.id" :key="hotel.id"> {{ hotel.name }} </option>
+                  </select>
+                 <p class="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple hotels</p>
+             </div>
+
+
             <div class="flex justify-end space-x-3">
               <button type="button" @click="showUserModal = false" class="px-4 py-2 border rounded">
                 Cancel
@@ -374,9 +380,14 @@
                     {{ staff.role }}
                   </span>
                 </td>
-                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ getHotelName(staff.hotelId) || 'N/A' }}
-                </td>
+              <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+           <div v-if="staff.hotelIds && staff.hotelIds.length > 0">
+            <span class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+               {{ getHotelName(staff.hotelIds || staff.hotelId) }}
+            </span>
+            </div>
+          <span v-else>N/A</span>
+          </td>
                 <td class="px-4 py-4 whitespace-nowrap text-sm font-medium">
                   <button 
                     @click="confirmDeleteStaff(staff.id)"
@@ -468,7 +479,7 @@ const staffForm = ref({
   email: '',
   password: '',
   role: 'hotel_admin',
-  hotelId: ''
+   hotelIds: []
 })
 
 // Fetch data on mount
@@ -667,6 +678,12 @@ const refreshGuests = async () => {
 
 // Staff management
 const createStaff = async () => {
+
+    if (staffForm.value.hotelIds.length === 0) {
+    alert('Please select at least one hotel');
+    return;
+  }
+
   try {
     loading.value = true;
     
@@ -679,13 +696,15 @@ const createStaff = async () => {
     const user = userCredential.user;
     
     // 2. Save to Firestore
-    await setDoc(doc(db, 'staff', user.uid), {
-      uid: user.uid,
-      email: staffForm.value.email,
-      role: staffForm.value.role,
-      hotelId: staffForm.value.hotelId,
-      createdAt: Timestamp.now()
-    });
+await setDoc(doc(db, 'staff', user.uid), {
+  uid: user.uid,
+  email: staffForm.value.email,
+  role: staffForm.value.role,
+    hotelIds: Array.isArray(staffForm.value.hotelIds) 
+    ? staffForm.value.hotelIds 
+    : [staffForm.value.hotelIds].filter(Boolean),
+  createdAt: Timestamp.now()
+});
     
     alert('Staff member created successfully!');
     showUserModal.value = false;
@@ -717,9 +736,21 @@ const fetchStaff = async () => {
   }
 };
 
-const getHotelName = (hotelId) => {
-  const hotel = hotels.value.find(h => h.id === hotelId);
-  return hotel ? hotel.name : '';
+const getHotelName = (hotelIds) => {
+  // If hotelIds is undefined/null, return N/A
+  if (!hotelIds) return 'N/A';
+  
+  // If it's already an array, use it as is
+  if (Array.isArray(hotelIds)) {
+    return hotelIds.map(id => {
+      const hotel = hotels.value.find(h => h.id === id);
+      return hotel ? hotel.name : 'Unknown Hotel';
+    }).join(', ');
+  }
+  
+  // If it's a single ID (string), wrap it in an array
+  const hotel = hotels.value.find(h => h.id === hotelIds);
+  return hotel ? hotel.name : 'Unknown Hotel';
 };
 
 
