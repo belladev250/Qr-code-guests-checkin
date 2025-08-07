@@ -85,10 +85,12 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">Booking Source</label>
             <select v-model="bookingSource" class="border rounded px-3 py-2 w-full">
               <option value="all">All</option>
-              <option value="Bookello">Bookello</option>
+              <option value="Bookello">Bookello.life</option>
               <option value="Booking.com">Booking.com</option>
-              <option value="Airbnb">Airbnb</option>
+              <option value="Agora">Agora</option>
               <option value="Expedia">Expedia</option>
+              <option value="Hotel">Hotel.com</option>
+
             </select>
           </div>
           <div>
@@ -112,6 +114,7 @@
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check-In</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check-out</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Passport/ID</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reservation</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hotel</th>
@@ -132,6 +135,9 @@
                 </td>
                 <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                   {{ guest.source }}
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                 <span>{{ guest.amount }}</span>  <span>USD</span>
                 </td>
                 <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                   <button 
@@ -244,47 +250,95 @@
       </div>
 
       <!-- Document Viewer Modal -->
-      <div v-if="activeDocument.url" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full h-[90vh] flex flex-col">
-          <div class="p-4 border-b flex justify-between items-center">
-            <h3 class="text-lg font-medium">{{ activeDocument.title }}</h3>
-            <button 
-              @click="activeDocument.url = null" 
-              class="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"
-            >
-              <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-              </svg>
-            </button>
-          </div>
-          
-          <div class="flex-1 overflow-hidden">
-            <iframe 
-              :src="activeDocument.url" 
-              class="w-full h-full border-0"
-              frameborder="0"
-            ></iframe>
-          </div>
-          
-          <div class="p-4 border-t flex justify-between items-center">
-            <div class="text-sm text-gray-500">
-              Document Type: {{ activeDocument.type === 'passport' ? 'Passport/ID' : 'Reservation Confirmation' }}
-            </div>
-            <div>
-              <a 
-                :href="activeDocument.url.includes('google.com') ? activeDocument.url.split('url=')[1] : activeDocument.url" 
-                download
-                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded inline-flex items-center"
-              >
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                </svg>
-                Download
-              </a>
-            </div>
-          </div>
+    <!-- Replace your existing Document Viewer Modal with this improved version -->
+<div v-if="activeDocument.url" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+  <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full h-[90vh] flex flex-col">
+    <div class="p-4 border-b flex justify-between items-center">
+      <h3 class="text-lg font-medium">{{ activeDocument.title }}</h3>
+      <button 
+        @click="activeDocument.url = null" 
+        class="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"
+      >
+        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    
+    <div class="flex-1 overflow-hidden">
+      <!-- Image Viewer -->
+      <div v-if="activeDocument.fileType === 'image'" class="w-full h-full flex items-center justify-center bg-gray-100">
+        <div class="max-w-full max-h-full overflow-auto p-4">
+          <img 
+            :src="activeDocument.url" 
+            :alt="activeDocument.title"
+            class="max-w-full max-h-full object-contain shadow-lg rounded"
+            style="min-height: 200px;"
+            @error="$event.target.src = activeDocument.originalUrl"
+          />
         </div>
       </div>
+      
+      <!-- PDF Viewer -->
+      <div v-else-if="activeDocument.fileType === 'pdf'" class="w-full h-full">
+        <iframe 
+          :src="activeDocument.url" 
+          class="w-full h-full border-0"
+          frameborder="0"
+        ></iframe>
+      </div>
+      
+      <!-- Fallback for unknown file types -->
+      <div v-else class="w-full h-full flex items-center justify-center bg-gray-100">
+        <div class="text-center p-8">
+          <svg class="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          <h3 class="text-lg font-medium text-gray-900 mb-2">Document Preview</h3>
+          <p class="text-gray-500 mb-4">Cannot preview this file type in browser</p>
+          <button 
+            @click="downloadDocument"
+            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded inline-flex items-center"
+          >
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Download to View
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="p-4 border-t flex justify-between items-center">
+      <div class="text-sm text-gray-500">
+        Document Type: {{ activeDocument.type === 'passport' ? 'Passport/ID' : 'Reservation Confirmation' }}
+        <span class="ml-2 px-2 py-1 bg-gray-100 rounded text-xs">
+          {{ activeDocument.fileType?.toUpperCase() }}
+        </span>
+      </div>
+      <div class="flex space-x-3">
+        <button 
+          @click="window.open(activeDocument.originalUrl || activeDocument.url, '_blank')"
+          class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded inline-flex items-center"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+          </svg>
+          Open in New Tab
+        </button>
+        <button 
+          @click="downloadDocument"
+          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded inline-flex items-center"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          Download
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
     </div>
 
     <!-- Staff Management -->
@@ -491,10 +545,15 @@ const statusClass = (status) => {
 }
 
 // Document viewing
+
+// Replace the existing document viewing functions in your Vue component
+
+// Document viewing
 const activeDocument = ref({
   type: null, // 'passport' or 'reservation'
   url: null,
-  title: ''
+  title: '',
+  fileType: null // 'image' or 'pdf'
 });
 
 const viewDocument = (url, type) => {
@@ -503,22 +562,73 @@ const viewDocument = (url, type) => {
     return;
   }
   
+  const fileType = getFileType(url);
+  
   activeDocument.value = {
     type,
-    url: formatCloudinaryUrl(url),
-    title: type === 'passport' ? 'Passport/ID Document' : 'Reservation Confirmation'
+    url: formatDocumentUrl(url, fileType),
+    originalUrl: url, // Keep original for download
+    title: type === 'passport' ? 'Passport/ID Document' : 'Reservation Confirmation',
+    fileType
   };
 };
 
-const formatCloudinaryUrl = (url) => {
-  if (url.includes('cloudinary.com')) {
-    // Use Google Docs viewer for Cloudinary PDFs
-    return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
+const getFileType = (url) => {
+  // Check file extension
+  const lowercaseUrl = url.toLowerCase();
+  if (lowercaseUrl.includes('.pdf') || lowercaseUrl.includes('pdf')) {
+    return 'pdf';
   }
-  return url;
+  if (lowercaseUrl.includes('.jpg') || lowercaseUrl.includes('.jpeg') || 
+      lowercaseUrl.includes('.png') || lowercaseUrl.includes('.gif') || 
+      lowercaseUrl.includes('.webp') || lowercaseUrl.includes('image')) {
+    return 'image';
+  }
+  
+  // If from Cloudinary, check the resource type in URL
+  if (url.includes('cloudinary.com')) {
+    if (url.includes('/image/') || url.includes('f_auto') || url.includes('q_auto')) {
+      return 'image';
+    }
+    if (url.includes('/raw/') || url.includes('.pdf')) {
+      return 'pdf';
+    }
+  }
+  
+  // Default to image for most uploads
+  return 'image';
 };
 
+const formatDocumentUrl = (url, fileType) => {
+  if (fileType === 'image') {
+    // For images, return the direct URL
+    if (url.includes('cloudinary.com')) {
+      // Optimize Cloudinary images for viewing
+      return url.replace('/upload/', '/upload/f_auto,q_auto,w_1200/');
+    }
+    return url;
+  } else {
+    // For PDFs, use Google Docs viewer as fallback
+    if (url.includes('cloudinary.com')) {
+      return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
+    }
+    return url;
+  }
+};
 
+// Add this method to handle download with proper URL
+const downloadDocument = () => {
+  const downloadUrl = activeDocument.value.originalUrl || activeDocument.value.url;
+  const link = document.createElement('a');
+  link.href = downloadUrl;
+  link.download = `${activeDocument.value.type}_document`;
+  link.target = '_blank';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+// Template for the improved document viewer modal
 // Guest management
 const approveGuest = async (guestId) => {
   try {

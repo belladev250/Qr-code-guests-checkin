@@ -9,6 +9,7 @@
           <input 
             type="checkbox" 
             id="bookello" 
+            required
             :checked="selectedSource === 'Bookello'"
             @change="() => selectSource('Bookello')" 
             class="mr-2 h-4 w-4 appearance-none checked:bg-blue-500 checked:border-transparent border border-gray-300 rounded focus:ring-blue-500"
@@ -68,6 +69,7 @@
           @change="handleFileUpload($event, 'reservation')" 
           class="hidden" 
           id="reservationFile"
+          required
           ref="reservationFileInput"
         >
         <label for="reservationFile" class="block mt-2 px-4 py-2 bg-gray-100 rounded-md text-gray-700 cursor-pointer hover:bg-gray-200">
@@ -87,6 +89,7 @@
           type="file" 
           @change="handleFileUpload($event, 'passport')" 
           class="hidden" 
+          required
           id="passportFile"
           ref="passportFileInput"
         >
@@ -106,6 +109,7 @@
           <input 
             v-model="checkIn" 
             type="date" 
+            required
             class="w-full border border-gray-300 rounded-md p-2"
           >
         </div>
@@ -114,6 +118,7 @@
           <input 
             v-model="checkOut" 
             type="date" 
+            required
             class="w-full border border-gray-300 rounded-md p-2"
           >
         </div>
@@ -127,6 +132,7 @@
           <input 
             v-model="amount" 
             type="text" 
+            required
             class="w-full border border-gray-300 rounded-md p-2" 
             placeholder="$200"
           >
@@ -136,6 +142,7 @@
           <input 
             v-model="guestName" 
             type="text" 
+            required
             class="w-full border border-gray-300 rounded-md p-2" 
             placeholder="John Doe"
           >
@@ -146,7 +153,7 @@
     <div class="mb-6">
       <h2 class="font-semibold mb-1">Hotel or apartment name</h2>
       <select 
-        v-model="hotel" 
+        v-model="hotel" required
         class="w-full border border-gray-300 rounded-md p-2"
       >
         <option disabled value="">Select a hotel or apartment</option>

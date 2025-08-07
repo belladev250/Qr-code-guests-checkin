@@ -6,7 +6,7 @@ import SuperAdminDashboard from '@/components/SuperAdminDashboard.vue'
 import QrGenerator from '@/components/QrGenerator.vue'
 import CheckinPage from '../pages/CheckinPage.vue'
 const routes = [
-  { path: '/Checkin', name: 'CheckIn', component: CheckinPage },
+  { path: '/checkin', name: 'CheckIn', component: CheckinPage },
   { path: '/admin', name: 'Admin', component: Admin },
   { path: '/login', name: 'Login', component: Login },
   { path: '/reception-dashboard', name: 'receptiondashboard', component: ReceptionDashboard },
