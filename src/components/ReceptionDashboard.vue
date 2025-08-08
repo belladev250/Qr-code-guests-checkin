@@ -116,6 +116,7 @@
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reservation</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check-in Time</th>
+                
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -172,6 +173,12 @@
                   <span v-else class="text-gray-500">
                     {{ formatTime(guest.checkedInAt) }}
                   </span>
+
+                    <button 
+               @click="deleteCheckin(guest.id)"
+              class="bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded ml-2" >
+             Delete
+             </button>
                 </td>
               </tr>
             </tbody>
@@ -259,7 +266,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { 
   collection, getDocs, getDoc, doc, updateDoc, 
-  query, where, Timestamp
+  query, where,deleteDoc
 } from 'firebase/firestore'
 import { getAuth, signOut } from 'firebase/auth'
 import { db, auth } from '@/firebase'
@@ -347,7 +354,8 @@ const fetchCheckins = async () => {
         ...data,
         status: data.status === 'checked-in' ? 'checked-in' : 'pending',
         checkInDate: data.checkInDate?.toDate?.() || data.checkInDate,
-        checkOutDate: data.checkOutDate?.toDate?.() || data.checkOutDate
+        checkOutDate: data.checkOutDate?.toDate?.() || data.checkOutDate,
+        checkedInAt: data.checkedInAt?.toDate?.() || data.checkedInAt // Convert Timestamp to Date
       }
     })
   } catch (error) {
@@ -357,21 +365,37 @@ const fetchCheckins = async () => {
   }
 }
 
+
+const deleteCheckin = async (checkinId) => {
+  if (!confirm('Are you sure you want to delete this check-in?')) return;
+  
+  try {
+    await deleteDoc(doc(db, 'checkins', checkinId));
+    
+    // Remove from local state
+    guests.value = guests.value.filter(guest => guest.id !== checkinId);
+    
+    alert('Check-in deleted successfully');
+  } catch (error) {
+    console.error('Error deleting check-in:', error);
+    alert('Failed to delete check-in: ' + error.message);
+  }
+};
 const markAsCheckedIn = async (guestId) => {
   if (!confirm('Mark this guest as checked-in?')) return
   
   try {
-    const now = Timestamp.now()
+    const now = new Date() // Just use a regular JavaScript Date object
     await updateDoc(doc(db, 'checkins', guestId), {
       status: 'checked-in',
-      checkedInAt: now,
+      checkedInAt: now, // Firestore will automatically convert this to a Timestamp
       checkedInBy: currentUser.value.uid
     })
 
-    // Update local state
+    // Update local state with the same Date object
     guests.value = guests.value.map(guest => 
       guest.id === guestId 
-        ? { ...guest, status: 'checked-in', checkedInAt: now.toDate() }
+        ? { ...guest, status: 'checked-in', checkedInAt: now }
         : guest
     )
   } catch (error) {
