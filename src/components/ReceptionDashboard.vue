@@ -70,7 +70,7 @@
         <button 
           @click="downloadReport" 
           class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded flex items-center justify-center w-full md:w-auto"
-          :disabled="filteredGuests.length === 0"
+          :disabled="filteredAndSortedGuests.length === 0"
         >
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -89,6 +89,23 @@
               <option value="pending">Pending</option>
               <option value="checked-in">Checked-In</option>
             </select>
+          </div>
+          <div class="w-full sm:w-auto">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Search by Name</label>
+            <input 
+              type="text" 
+              v-model="searchQuery" 
+              placeholder="Search guest name..."
+              class="border rounded px-3 py-2 w-full sm:w-64"
+            >
+          </div>
+          <div class="w-full sm:w-auto">
+            <button 
+              @click="clearFilters"
+              class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded w-full"
+            >
+              Clear Filters
+            </button>
           </div>
         </div>
       </div>
@@ -116,11 +133,10 @@
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reservation</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check-in Time</th>
-                
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-              <tr v-for="guest in filteredGuests" :key="guest.id">
+              <tr v-for="guest in paginatedGuests" :key="guest.id">
                 <td class="px-4 py-4 whitespace-nowrap">
                   <div class="font-medium text-gray-900">{{ guest.guestName }}</div>
                 </td>
@@ -174,20 +190,82 @@
                     {{ formatTime(guest.checkedInAt) }}
                   </span>
 
-                    <button 
-               @click="deleteCheckin(guest.id)"
-              class="bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded ml-2" >
-             Delete
-             </button>
+                  <button 
+                    @click="deleteCheckin(guest.id)"
+                    class="bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded ml-2"
+                  >
+                    Delete
+                  </button>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
+
+        <!-- Pagination Controls -->
+        <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+          <div class="flex-1 flex justify-between items-center">
+            <div class="text-sm text-gray-700">
+              Showing <span class="font-medium">{{ (currentPage - 1) * pageSize + 1 }}</span> to 
+              <span class="font-medium">{{ Math.min(currentPage * pageSize, filteredAndSortedGuests.length) }}</span> of 
+              <span class="font-medium">{{ filteredAndSortedGuests.length }}</span> results
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="text-sm text-gray-700 mr-4">Rows per page:</span>
+              <select 
+                v-model="pageSize" 
+                class="border rounded px-2 py-1 text-sm"
+                @change="currentPage = 1"
+              >
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </div>
+            <div>
+              <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                <button 
+                  @click="currentPage--" 
+                  :disabled="currentPage === 1"
+                  class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span class="sr-only">Previous</span>
+                  <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                  </svg>
+                </button>
+                <button 
+                  v-for="page in visiblePages" 
+                  :key="page"
+                  @click="currentPage = page"
+                  :class="[
+                    'relative inline-flex items-center px-4 py-2 border text-sm font-medium',
+                    currentPage === page 
+                      ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' 
+                      : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                  ]"
+                >
+                  {{ page }}
+                </button>
+                <button 
+                  @click="currentPage++" 
+                  :disabled="currentPage === totalPages"
+                  class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span class="sr-only">Next</span>
+                  <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                  </svg>
+                </button>
+              </nav>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Empty State -->
-      <div v-if="!loading && filteredGuests.length === 0" class="bg-white shadow rounded-lg p-8 text-center mt-6">
+      <div v-if="!loading && filteredAndSortedGuests.length === 0" class="bg-white shadow rounded-lg p-8 text-center mt-6">
         <p class="text-gray-500">
           {{ assignedHotels.length === 0 ? 'No hotel assigned to your account' : 'No guests found matching your filters' }}
         </p>
@@ -263,7 +341,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { 
   collection, getDocs, getDoc, doc, updateDoc, 
   query, where,deleteDoc
@@ -279,6 +357,7 @@ const guests = ref([])
 const assignedHotels = ref([])
 const currentHotelId = ref('')
 const statusFilter = ref('all')
+const searchQuery = ref('')
 const activeDocument = ref({
   type: null,
   url: null,
@@ -287,14 +366,91 @@ const activeDocument = ref({
 })
 const currentUser = ref(null)
 
+// Pagination
+const currentPage = ref(1)
+const pageSize = ref(10)
+
 const router = useRouter()
 
-// Computed
-const filteredGuests = computed(() => {
-  return guests.value.filter(guest => 
-    statusFilter.value === 'all' || guest.status === statusFilter.value
-  )
+const filteredAndSortedGuests = computed(() => {
+  const filtered = guests.value.filter(guest => {
+    // Filter by status
+    const statusMatch = statusFilter.value === 'all' || guest.status === statusFilter.value
+    
+    // Filter by search query
+    let searchMatch = true
+    if (searchQuery.value) {
+      searchMatch = guest.guestName.toLowerCase().includes(searchQuery.value.toLowerCase())
+    }
+    
+    return statusMatch && searchMatch
+  })
+  
+  // Sort by check-in date (newest first)
+  return filtered.sort((a, b) => {
+    const dateA = getDateForSorting(a.checkInDate)
+    const dateB = getDateForSorting(b.checkInDate)
+    return dateB - dateA // Descending order (newest first)
+  })
 })
+
+// Paginated guests
+const paginatedGuests = computed(() => {
+  const startIndex = (currentPage.value - 1) * pageSize.value
+  return filteredAndSortedGuests.value.slice(startIndex, startIndex + pageSize.value)
+})
+
+// Total pages
+const totalPages = computed(() => {
+  return Math.ceil(filteredAndSortedGuests.value.length / pageSize.value)
+})
+
+// Visible pages for pagination
+const visiblePages = computed(() => {
+  const pages = []
+  const maxVisiblePages = 5
+  let startPage = Math.max(1, currentPage.value - Math.floor(maxVisiblePages / 2))
+  let endPage = Math.min(totalPages.value, startPage + maxVisiblePages - 1)
+  
+  // Adjust if we're near the beginning
+  if (endPage - startPage + 1 < maxVisiblePages) {
+    startPage = Math.max(1, endPage - maxVisiblePages + 1)
+  }
+  
+  for (let i = startPage; i <= endPage; i++) {
+    pages.push(i)
+  }
+  
+  return pages
+})
+
+// Watch for filter changes and reset to first page
+watch([statusFilter, searchQuery], () => {
+  currentPage.value = 1
+})
+
+// Helper function to normalize dates for sorting
+const getDateForSorting = (date) => {
+  if (!date) return new Date(0) // If no date, put at the end
+  
+  // Handle Firestore Timestamp objects
+  if (date && typeof date.toDate === 'function') {
+    return date.toDate()
+  }
+  
+  // Handle Date objects
+  if (date instanceof Date) {
+    return date
+  }
+  
+  // Handle string dates
+  if (typeof date === 'string') {
+    return new Date(date)
+  }
+  
+  // Fallback
+  return new Date(date || 0)
+}
 
 // Methods
 const fetchUserData = async () => {
@@ -365,7 +521,6 @@ const fetchCheckins = async () => {
   }
 }
 
-
 const deleteCheckin = async (checkinId) => {
   if (!confirm('Are you sure you want to delete this check-in?')) return;
   
@@ -380,7 +535,8 @@ const deleteCheckin = async (checkinId) => {
     console.error('Error deleting check-in:', error);
     alert('Failed to delete check-in: ' + error.message);
   }
-};
+}
+
 const markAsCheckedIn = async (guestId) => {
   if (!confirm('Mark this guest as checked-in?')) return
   
@@ -437,7 +593,7 @@ const downloadDocument = () => {
 const downloadReport = () => {
   const csvContent = "data:text/csv;charset=utf-8," +
     "Guest Name,Check-In Date,Check-Out Date,Status,Checked-In At\n" +
-    filteredGuests.value.map(guest => 
+    filteredAndSortedGuests.value.map(guest => 
       `"${guest.guestName}","${formatDate(guest.checkInDate)}","${formatDate(guest.checkOutDate)}","${guest.status}","${guest.checkedInAt ? formatTime(guest.checkedInAt) : 'N/A'}"`
     ).join("\n")
   
@@ -448,6 +604,12 @@ const downloadReport = () => {
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
+}
+
+const clearFilters = () => {
+  statusFilter.value = 'all'
+  searchQuery.value = ''
+  currentPage.value = 1
 }
 
 const logout = async () => {

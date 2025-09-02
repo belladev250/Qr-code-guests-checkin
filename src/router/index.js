@@ -5,13 +5,15 @@ import ReceptionDashboard from '@/components/ReceptionDashboard.vue'
 import SuperAdminDashboard from '@/components/SuperAdminDashboard.vue'
 import QrGenerator from '@/components/QrGenerator.vue'
 import CheckinPage from '../pages/CheckinPage.vue'
+import landingPage from '@/pages/landingPage.vue'
 const routes = [
   { path: '/checkin', name: 'CheckIn', component: CheckinPage },
   { path: '/admin', name: 'Admin', component: Admin },
   { path: '/login', name: 'Login', component: Login },
   { path: '/reception-dashboard', name: 'receptiondashboard', component: ReceptionDashboard },
   { path: '/super-admin-dashboard', name: 'admindashboard', component: SuperAdminDashboard },
-  { path: '/', name:"QrGenerator",component:QrGenerator}
+  { path: '/', name:"QrGenerator",component:QrGenerator},
+  { path: '/landing', name: 'landingPage', component: landingPage }
 
 ]
 
