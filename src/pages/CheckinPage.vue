@@ -307,20 +307,20 @@ const uploadToCloudinary = async (file) => {
 
 const sendEmailNotification = async (checkinData) => {
   try {
-    // Using EmailJS to send the notification
+    // Only send the two parameters your template expects
     const emailData = {
-      service_id: 'service_y0cbytl', // Replace with your EmailJS service ID
-      template_id: 'template_n7hbnwm', // Replace with your EmailJS template ID
-      user_id: 'FtJ9t4rF-3-dGoVJn', // Replace with your EmailJS user ID
+      service_id: 'service_y0cbytl', 
+      template_id: 'template_n7hbnwm', 
+      user_id: 'FtJ9t4rF-3-dGoVJn', 
       template_params: {
-        to_email: 'melissaineza8@gmail.com',
-        guest_name: checkinData.guestName,
-        hotel: checkinData.hotel,
-        
+        guest_name: checkinData.guestName || 'Guest',
+        hotel: checkinData.hotel || 'Hotel'
       }
     };
 
-    // Send email using EmailJS
+    console.log('Sending email with data:', emailData); // Debug log
+
+    // Send email using EmailJS REST API
     const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
       headers: {
@@ -329,16 +329,22 @@ const sendEmailNotification = async (checkinData) => {
       body: JSON.stringify(emailData)
     });
 
+    const responseText = await response.text();
+    console.log('EmailJS response:', response.status, responseText);
+
     if (!response.ok) {
-      console.warn('Email notification failed, but form submission was successful');
+      throw new Error(`EmailJS API error: ${response.status} - ${responseText}`);
     }
+
+    console.log('Email sent successfully');
+    return true;
+
   } catch (error) {
-    console.warn('Email notification error:', error);
+    console.error('Email notification error:', error);
     // Don't throw error here - we don't want email failures to affect form submission
+    return false;
   }
 }
-
-
 
 const validateForm = () => {
   errorMessage.value = ''
